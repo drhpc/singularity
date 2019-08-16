@@ -75,6 +75,48 @@ func GenerateBundleConfig(bundlePath string, config *specs.Spec) (*generate.Gene
 			return nil, fmt.Errorf("failed to generate OCI config: %s", err)
 		}
 		g.SetProcessArgs([]string{RunScript})
+
+		// Work around issue in github.com/opencontainers/runtime-tools
+		//
+		// There's an incorrect default value where all the
+		// entries refer to the same index (argument) as if this
+		// was combined using OR, when in fact it's combined
+		// using AND, rendering the entry inneffective.
+		//
+		// Patch the default by extracting the incorrect entries
+		// and converting them into multiple rules for the same
+		// syscall.
+		var move []specs.LinuxSyscall
+
+	NextSyscall:
+		for i, s := range g.Config.Linux.Seccomp.Syscalls {
+			if len(s.Args) < 2 {
+				continue
+			}
+
+			for _, a := range s.Args[1:] {
+				if a.Index != s.Args[0].Index {
+					// assume that if there's at
+					// least one Index that is
+					// different, we are not looking
+					// at the issue we are trying to
+					// patch
+					continue NextSyscall
+				}
+			}
+
+			for _, a := range s.Args[1:] {
+				newSyscall := s
+				newSyscall.Args = []specs.LinuxSeccompArg{a}
+				move = append(move, newSyscall)
+			}
+
+			g.Config.Linux.Seccomp.Syscalls[i].Args = s.Args[:1]
+		}
+
+		if len(move) > 0 {
+			g.Config.Linux.Seccomp.Syscalls = append(g.Config.Linux.Seccomp.Syscalls, move...)
+		}
 	} else {
 		g = generate.Generator{
 			Config:       config,
