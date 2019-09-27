@@ -14,16 +14,10 @@
    limitations under the License.
 */
 
-package version
+package images
 
-var (
-	// Package is filled at linking time
-	Package = "github.com/containerd/containerd"
-
-	// Version holds the complete version number. Filled in at linking time.
-	Version = "1.3.0+unknown"
-
-	// Revision is filled with the VCS (e.g. git) revision being used to build
-	// the program at linking time.
-	Revision = ""
+const (
+	// AnnotationImageName is an annotation on a Descriptor in an index.json
+	// containing the `Name` value as used by an `Image` struct
+	AnnotationImageName = "io.containerd.image.name"
 )

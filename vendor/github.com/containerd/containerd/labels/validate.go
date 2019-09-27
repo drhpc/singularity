@@ -14,16 +14,24 @@
    limitations under the License.
 */
 
-package version
+package labels
 
-var (
-	// Package is filled at linking time
-	Package = "github.com/containerd/containerd"
-
-	// Version holds the complete version number. Filled in at linking time.
-	Version = "1.3.0+unknown"
-
-	// Revision is filled with the VCS (e.g. git) revision being used to build
-	// the program at linking time.
-	Revision = ""
+import (
+	"github.com/containerd/containerd/errdefs"
+	"github.com/pkg/errors"
 )
+
+const (
+	maxSize = 4096
+)
+
+// Validate a label's key and value are under 4096 bytes
+func Validate(k, v string) error {
+	if (len(k) + len(v)) > maxSize {
+		if len(k) > 10 {
+			k = k[:10]
+		}
+		return errors.Wrapf(errdefs.ErrInvalidArgument, "label key and value greater than maximum size (%d bytes), key: %s", maxSize, k)
+	}
+	return nil
+}
